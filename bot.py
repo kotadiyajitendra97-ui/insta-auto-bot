@@ -6,15 +6,18 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from instagrapi import Client as InstaClient
 
-# --- Telegram Bot Configuration ---
-# Apni Telegram Bot Token aur API credentials yahan dalein
-API_ID = 12345678  # Apna Telegram api_id dalein
-API_HASH = "your_telegram_api_hash"
-BOT_TOKEN = "your_telegram_bot_token"
+# --- Secure Environment Variables ---
+# Yeh GitHub Secrets se automatically token aur credentials uthayega
+API_ID = int(os.getenv("API_ID", "12345678"))
+API_HASH = os.getenv("API_HASH", "your_telegram_api_hash")
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+if not BOT_TOKEN:
+    raise ValueError("❌ BOT_TOKEN environment variable is missing!")
 
 app = Client("insta_auto_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# In-memory database (Aap ise SQLite ya MongoDB se replace kar sakte hain)
+# In-memory database for accounts, queue, and settings
 USER_DB = {
     "accounts": {},      # {username: sessionid}
     "links_queue": [],   # List of Telegram post links
@@ -88,11 +91,9 @@ async def start_posting_process(client, callback_query):
 
     await callback_query.message.edit_text("🚀 **Posting Started...**\nBot background mein reels post karna shuru kar raha hai.")
 
-    # Active account (Example: pehla account)
     active_username = accounts[0]
     sessionid = USER_DB["accounts"][active_username]
 
-    # Instagrapi Login
     cl = InstaClient()
     try:
         cl.login_by_sessionid(sessionid)
@@ -100,7 +101,6 @@ async def start_posting_process(client, callback_query):
         await callback_query.message.reply_text(f"🚨 **Instagram Auth Error:**\n`{str(e)}`")
         return
 
-    # Set Profile (DP & Bio)
     settings = USER_DB["settings"]
     try:
         if settings["dp"] and Path(settings["dp"]).exists():
@@ -111,7 +111,6 @@ async def start_posting_process(client, callback_query):
     except Exception as e:
         await callback_query.message.reply_text(f"⚠️ **Profile Error:** `{str(e)}`")
 
-    # Upload Reels with 40s Gap
     total_posted = 0
     total_links = len(queue)
 
@@ -119,11 +118,8 @@ async def start_posting_process(client, callback_query):
         try:
             await callback_query.message.reply_text(f"🔄 Processing Reel {index}/{total_links}\nLink: {link}")
             
-            # Simulated video download from public channel link
             video_file = "temp_downloaded_reel.mp4"
-            # Yahan aap requests ya yt-dlp use karke link se video download karenge
             
-            # Uploading to Instagram
             cl.clip_upload(
                 path=video_file,
                 caption=settings["caption"],
@@ -137,13 +133,11 @@ async def start_posting_process(client, callback_query):
                 f"• Account: @{active_username}"
             )
 
-            # 40 seconds gap except for the last video
             if index < total_links:
                 await callback_query.message.reply_text("⏳ Waiting for 40 seconds gap to protect account safety...")
                 await asyncio.sleep(40)
 
         except Exception as e:
-            # Professional raw error reporting from Instagram
             await callback_query.message.reply_text(
                 f"🚨 **Instagram Error Detected:**\n`{str(e)}`\n"
                 f"Posting paused or skipped for this item."
@@ -156,5 +150,5 @@ async def back_to_menu(client, callback_query):
     await start_command(client, callback_query.message)
 
 if __name__ == "__main__":
-    print("🤖 Telegram Bot is running...")
+    print("🤖 Telegram Bot is running securely...")
     app.run()
