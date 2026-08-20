@@ -1,6 +1,19 @@
 import os
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from flask import Flask
+from threading import Thread
+
+# --- Dummy Flask Server for Render Web Service Port Binding ---
+app_flask = Flask(__name__)
+
+@app_flask.route('/')
+def home():
+    return "Bot is active and running!"
+
+def run_flask():
+    port = int(os.environ.get("PORT", 8080))
+    app_flask.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
 
 # --- Secure Environment Variables ---
 API_ID = int(os.getenv("API_ID", "12345678"))
@@ -11,17 +24,6 @@ if not BOT_TOKEN:
     raise ValueError("❌ BOT_TOKEN environment variable is missing!")
 
 app = Client("insta_auto_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
-
-USER_DB = {
-    "accounts": {},      
-    "links_queue": [],   
-    "settings": {
-        "caption": "Link in bio 🔥",
-        "thumbnail": None,
-        "dp": None,
-        "bio": "Automated via Telegram Bot 🚀"
-    }
-}
 
 @app.on_message(filters.command("start"))
 async def start_command(client, message):
@@ -43,5 +45,10 @@ async def start_command(client, message):
     await message.reply_text(text, reply_markup=keyboard)
 
 if __name__ == "__main__":
-    print("🤖 Telegram Bot is running...")
+    # Start Flask server in a separate thread so Render detects the port
+    flask_thread = Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+    
+    print("🤖 Starting Telegram Bot securely...")
     app.run()
