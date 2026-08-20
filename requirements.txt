@@ -2,3 +2,4 @@ pyrogram
 tgcrypto
 instagrapi
 requests
+flask
