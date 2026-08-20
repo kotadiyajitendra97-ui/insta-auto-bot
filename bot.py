@@ -5,10 +5,10 @@ from pathlib import Path
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from instagrapi import Client as InstaClient
-from threading import Thread
 from flask import Flask
+from threading import Thread
 
-# --- Dummy Flask Server for Free Web Service Port Binding ---
+# --- Dummy Flask Server for Render Web Service ---
 app_flask = Flask(__name__)
 
 @app_flask.route('/')
@@ -17,7 +17,7 @@ def home():
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
-    app_flask.run(host="0.0.0.0", port=port)
+    app_flask.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
 
 # --- Secure Environment Variables ---
 API_ID = int(os.getenv("API_ID", "12345678"))
@@ -85,9 +85,10 @@ async def back_to_menu(client, callback_query):
     await start_command(client, callback_query.message)
 
 if __name__ == "__main__":
-    # Start Flask server in background thread so Render detects the port
-    t = Thread(target=run_flask)
-    t.start()
+    # Start Flask server in a separate daemon thread
+    flask_thread = Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
     
-    print("🤖 Telegram Bot & Web Server running securely...")
+    print("🤖 Starting Telegram Bot securely...")
     app.run()
