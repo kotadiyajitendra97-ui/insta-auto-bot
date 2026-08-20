@@ -1,23 +1,6 @@
 import os
-import time
-import asyncio
-from pathlib import Path
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from instagrapi import Client as InstaClient
-from flask import Flask
-from threading import Thread
-
-# --- Dummy Flask Server for Render Web Service ---
-app_flask = Flask(__name__)
-
-@app_flask.route('/')
-def home():
-    return "Bot is active and running!"
-
-def run_flask():
-    port = int(os.environ.get("PORT", 8080))
-    app_flask.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
 
 # --- Secure Environment Variables ---
 API_ID = int(os.getenv("API_ID", "12345678"))
@@ -29,7 +12,6 @@ if not BOT_TOKEN:
 
 app = Client("insta_auto_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
-# In-memory database
 USER_DB = {
     "accounts": {},      
     "links_queue": [],   
@@ -60,35 +42,6 @@ async def start_command(client, message):
     ])
     await message.reply_text(text, reply_markup=keyboard)
 
-@app.on_callback_query(filters.regex("saved_logins"))
-async def saved_logins_menu(client, callback_query):
-    accounts = list(USER_DB["accounts"].keys())
-    
-    if not accounts:
-        await callback_query.message.edit_text(
-            "💾 **Saved Logins**\n\nNo saved logins yet. Please login using cookies.",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Menu", callback_data="menu_back")]])
-        )
-        return
-
-    text = "💾 **Saved Logins**\n\nTap an account to remove or manage:\n"
-    keyboard = []
-    for idx, acc in enumerate(accounts, start=1):
-        text += f"{idx}. @{acc}\n"
-        keyboard.append([InlineKeyboardButton(f"❌ Remove @{acc}", callback_data=f"del_acc_{acc}")])
-    
-    keyboard.append([InlineKeyboardButton("🔙 Menu", callback_data="menu_back")])
-    await callback_query.message.edit_text(text, reply_markup=InlineKeyboardMarkup(keyboard))
-
-@app.on_callback_query(filters.regex("menu_back"))
-async def back_to_menu(client, callback_query):
-    await start_command(client, callback_query.message)
-
 if __name__ == "__main__":
-    # Start Flask server in a separate daemon thread
-    flask_thread = Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
-    
-    print("🤖 Starting Telegram Bot securely...")
+    print("🤖 Telegram Bot is running...")
     app.run()
